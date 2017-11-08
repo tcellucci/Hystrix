@@ -17,11 +17,16 @@ package com.netflix.hystrix.strategy.properties;
 
 import static org.junit.Assert.assertEquals;
 
+import org.junit.Rule;
 import org.junit.Test;
 
+import com.netflix.hystrix.strategy.Archaius2HystrixPlugins;
 import com.netflix.hystrix.strategy.properties.HystrixProperty.Factory;
 
-public class HystrixPropertyTest {
+public class HystrixArchaius2PropertyTest {
+    
+    @Rule
+    public Archaius2HystrixPlugins archaiusPlugins = new Archaius2HystrixPlugins();
 
     @Test
     public void testNested1() {

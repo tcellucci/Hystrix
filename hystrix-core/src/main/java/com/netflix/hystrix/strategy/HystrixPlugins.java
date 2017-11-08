@@ -15,6 +15,7 @@
  */
 package com.netflix.hystrix.strategy;
 
+import java.util.Optional;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.concurrent.atomic.AtomicReference;
@@ -54,7 +55,7 @@ public class HystrixPlugins {
     
     //We should not load unless we are requested to. This avoids accidental initialization. @agentgt
     //See https://en.wikipedia.org/wiki/Initialization-on-demand_holder_idiom
-    private static class LazyHolder { private static final HystrixPlugins INSTANCE = HystrixPlugins.create(); }
+    private static AtomicReference<HystrixPlugins> INSTANCE = new AtomicReference<>();
     private final ClassLoader classLoader;
     /* package */ final AtomicReference<HystrixEventNotifier> notifier = new AtomicReference<HystrixEventNotifier>();
     /* package */ final AtomicReference<HystrixConcurrencyStrategy> concurrencyStrategy = new AtomicReference<HystrixConcurrencyStrategy>();
@@ -63,21 +64,20 @@ public class HystrixPlugins {
     /* package */ final AtomicReference<HystrixCommandExecutionHook> commandExecutionHook = new AtomicReference<HystrixCommandExecutionHook>();
     private final HystrixDynamicProperties dynamicProperties;
 
-    
-    private HystrixPlugins(ClassLoader classLoader, LoggerSupplier logSupplier) {
+    HystrixPlugins(ClassLoader classLoader, HystrixDynamicProperties dynamicProperties) {
         //This will load Archaius if its in the classpath.
         this.classLoader = classLoader;
-        //N.B. Do not use a logger before this is loaded as it will most likely load the configuration system.
-        //The configuration system may need to do something prior to loading logging. @agentgt
-        dynamicProperties = resolveDynamicProperties(classLoader, logSupplier);
+        this.dynamicProperties = dynamicProperties;
     }
 
+    
     /**
      * For unit test purposes.
      * @ExcludeFromJavadoc
      */
     /* private */ static HystrixPlugins create(ClassLoader classLoader, LoggerSupplier logSupplier) {
-        return new HystrixPlugins(classLoader, logSupplier);
+        HystrixDynamicProperties dynamicProperties = resolveDynamicProperties(classLoader, logSupplier);
+        return new HystrixPlugins(classLoader, dynamicProperties);
     }
     
     /**
@@ -85,22 +85,27 @@ public class HystrixPlugins {
      * @ExcludeFromJavadoc
      */
     /* private */ static HystrixPlugins create(ClassLoader classLoader) {
-        return new HystrixPlugins(classLoader, new LoggerSupplier() {
+        return create(classLoader, new LoggerSupplier() {
             @Override
             public Logger getLogger() {
                 return LoggerFactory.getLogger(HystrixPlugins.class);
             }
         });
     }
+    
     /**
+     * For unit test purposes.
      * @ExcludeFromJavadoc
      */
-    /* private */ static HystrixPlugins create() {
-        return create(HystrixPlugins.class.getClassLoader());
+    static HystrixPlugins create(HystrixDynamicProperties dynamicProperties) {
+        ClassLoader classLoader = HystrixPlugins.class.getClassLoader();
+        return INSTANCE.updateAndGet(hp->new HystrixPlugins(classLoader, dynamicProperties));
     }
+    
 
     public static HystrixPlugins getInstance() {
-        return LazyHolder.INSTANCE;
+        ClassLoader classLoader = HystrixPlugins.class.getClassLoader();
+        return INSTANCE.updateAndGet(hp->Optional.ofNullable(hp).orElseGet(()->HystrixPlugins.create(classLoader)));
     }
 
     /**
@@ -365,7 +370,16 @@ public class HystrixPlugins {
     
 
     private static HystrixDynamicProperties resolveDynamicProperties(ClassLoader classLoader, LoggerSupplier logSupplier) {
-        HystrixDynamicProperties hp = getPluginImplementationViaProperties(HystrixDynamicProperties.class, 
+        HystrixDynamicProperties hp;
+        hp = DynamicPropertiesHelper.getDynamicProperties();
+        if (hp != null) {
+            logSupplier.getLogger().debug(
+                    "Consumed HystrixDynamicProperties instance from DynamicPropertiesHelper\". Using class: {}", 
+                    hp.getClass().getCanonicalName());
+            return hp;
+        }
+        
+        hp= getPluginImplementationViaProperties(HystrixDynamicProperties.class, 
                 HystrixDynamicPropertiesSystemProperties.getInstance());
         if (hp != null) {
             logSupplier.getLogger().debug(

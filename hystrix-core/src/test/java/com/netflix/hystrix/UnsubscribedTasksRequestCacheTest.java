@@ -76,7 +76,7 @@ public class UnsubscribedTasksRequestCacheTest {
 
     @Test
     public void testOneCommandIsUnsubscribed() throws ExecutionException, InterruptedException {
-
+        HystrixPlugins.getInstance().reset();
         HystrixPlugins.getInstance().registerCommandExecutionHook(new CommandExecutionHook());
         final HystrixRequestContext context = HystrixRequestContext.initializeContext();
         final AtomicInteger numCacheResponses = new AtomicInteger(0);

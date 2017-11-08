@@ -17,12 +17,14 @@ package com.netflix.hystrix;
 
 import static org.junit.Assert.assertEquals;
 
+
 import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
 
-import com.netflix.config.ConfigurationManager;
 import com.netflix.hystrix.HystrixCommandProperties.ExecutionIsolationStrategy;
 import com.netflix.hystrix.HystrixCommandProperties.Setter;
+import com.netflix.hystrix.strategy.Archaius2HystrixPlugins;
 import com.netflix.hystrix.strategy.properties.HystrixProperty;
 
 public class HystrixCommandPropertiesTest {
@@ -203,10 +205,13 @@ public class HystrixCommandPropertiesTest {
         }
 
     }
+    
+    @Rule
+    public Archaius2HystrixPlugins archaiusPlugins = new Archaius2HystrixPlugins();
 
     @After
     public void cleanup() {
-        ConfigurationManager.getConfigInstance().clear();
+//
     }
 
     @Test
@@ -236,54 +241,54 @@ public class HystrixCommandPropertiesTest {
     @Test
     public void testBooleanGlobalDynamicOverrideOfCodeDefault() throws Exception {
         HystrixCommandProperties properties = new TestPropertiesCommand(TestKey.TEST, new HystrixCommandProperties.Setter(), "unitTestPrefix");
-        ConfigurationManager.getConfigInstance().setProperty("unitTestPrefix.command.default.circuitBreaker.forceClosed", true);
+        archaiusPlugins.getConfig().setProperty("unitTestPrefix.command.default.circuitBreaker.forceClosed", true);
 
         // the global dynamic property should take precedence over the default
         assertEquals(true, properties.circuitBreakerForceClosed().get());
 
         // cleanup 
-        ConfigurationManager.getConfigInstance().clearProperty("unitTestPrefix.command.default.circuitBreaker.forceClosed");
+        archaiusPlugins.getConfig().clearProperty("unitTestPrefix.command.default.circuitBreaker.forceClosed");
     }
 
     @Test
     public void testBooleanInstanceBuilderOverrideOfGlobalDynamicOverride1() throws Exception {
         HystrixCommandProperties properties = new TestPropertiesCommand(TestKey.TEST,
                 new HystrixCommandProperties.Setter().withCircuitBreakerForceClosed(true), "unitTestPrefix");
-        ConfigurationManager.getConfigInstance().setProperty("unitTestPrefix.command.default.circuitBreaker.forceClosed", false);
+        archaiusPlugins.getConfig().setProperty("unitTestPrefix.command.default.circuitBreaker.forceClosed", false);
 
         // the builder injected should take precedence over the global dynamic property
         assertEquals(true, properties.circuitBreakerForceClosed().get());
 
         // cleanup 
-        ConfigurationManager.getConfigInstance().clearProperty("unitTestPrefix.command.default.circuitBreaker.forceClosed");
+        archaiusPlugins.getConfig().clearProperty("unitTestPrefix.command.default.circuitBreaker.forceClosed");
     }
 
     @Test
     public void testBooleanInstanceBuilderOverrideOfGlobalDynamicOverride2() throws Exception {
         HystrixCommandProperties properties = new TestPropertiesCommand(TestKey.TEST,
                 new HystrixCommandProperties.Setter().withCircuitBreakerForceClosed(false), "unitTestPrefix");
-        ConfigurationManager.getConfigInstance().setProperty("unitTestPrefix.command.default.circuitBreaker.forceClosed", true);
+        archaiusPlugins.getConfig().setProperty("unitTestPrefix.command.default.circuitBreaker.forceClosed", true);
 
         // the builder injected should take precedence over the global dynamic property
         assertEquals(false, properties.circuitBreakerForceClosed().get());
 
         // cleanup 
-        ConfigurationManager.getConfigInstance().clearProperty("unitTestPrefix.command.default.circuitBreaker.forceClosed");
+        archaiusPlugins.getConfig().clearProperty("unitTestPrefix.command.default.circuitBreaker.forceClosed");
     }
 
     @Test
     public void testBooleanInstanceDynamicOverrideOfEverything() throws Exception {
         HystrixCommandProperties properties = new TestPropertiesCommand(TestKey.TEST,
                 new HystrixCommandProperties.Setter().withCircuitBreakerForceClosed(false), "unitTestPrefix");
-        ConfigurationManager.getConfigInstance().setProperty("unitTestPrefix.command.default.circuitBreaker.forceClosed", false);
-        ConfigurationManager.getConfigInstance().setProperty("unitTestPrefix.command.TEST.circuitBreaker.forceClosed", true);
+        archaiusPlugins.getConfig().setProperty("unitTestPrefix.command.default.circuitBreaker.forceClosed", false);
+        archaiusPlugins.getConfig().setProperty("unitTestPrefix.command.TEST.circuitBreaker.forceClosed", true);
 
         // the instance specific dynamic property should take precedence over everything
         assertEquals(true, properties.circuitBreakerForceClosed().get());
 
         // cleanup 
-        ConfigurationManager.getConfigInstance().clearProperty("unitTestPrefix.command.default.circuitBreaker.forceClosed");
-        ConfigurationManager.getConfigInstance().clearProperty("unitTestPrefix.command.TEST.circuitBreaker.forceClosed");
+        archaiusPlugins.getConfig().clearProperty("unitTestPrefix.command.default.circuitBreaker.forceClosed");
+        archaiusPlugins.getConfig().clearProperty("unitTestPrefix.command.TEST.circuitBreaker.forceClosed");
     }
 
     @Test
@@ -304,56 +309,56 @@ public class HystrixCommandPropertiesTest {
     @Test
     public void testIntegerGlobalDynamicOverrideOfCodeDefault() throws Exception {
         HystrixCommandProperties properties = new TestPropertiesCommand(TestKey.TEST, new HystrixCommandProperties.Setter(), "unitTestPrefix");
-        ConfigurationManager.getConfigInstance().setProperty("unitTestPrefix.command.default.metrics.rollingStats.timeInMilliseconds", 1234);
+        archaiusPlugins.getConfig().setProperty("unitTestPrefix.command.default.metrics.rollingStats.timeInMilliseconds", 1234);
 
         // the global dynamic property should take precedence over the default
         assertEquals(1234, properties.metricsRollingStatisticalWindowInMilliseconds().get().intValue());
 
         // cleanup 
-        ConfigurationManager.getConfigInstance().clearProperty("unitTestPrefix.command.default.metrics.rollingStats.timeInMilliseconds");
+        archaiusPlugins.getConfig().clearProperty("unitTestPrefix.command.default.metrics.rollingStats.timeInMilliseconds");
     }
 
     @Test
     public void testIntegerInstanceBuilderOverrideOfGlobalDynamicOverride() throws Exception {
         HystrixCommandProperties properties = new TestPropertiesCommand(TestKey.TEST,
                 new HystrixCommandProperties.Setter().withMetricsRollingStatisticalWindowInMilliseconds(5000), "unitTestPrefix");
-        ConfigurationManager.getConfigInstance().setProperty("unitTestPrefix.command.default.rollingStats.timeInMilliseconds", 3456);
+        archaiusPlugins.getConfig().setProperty("unitTestPrefix.command.default.rollingStats.timeInMilliseconds", 3456);
 
         // the builder injected should take precedence over the global dynamic property
         assertEquals(5000, properties.metricsRollingStatisticalWindowInMilliseconds().get().intValue());
 
         // cleanup 
-        ConfigurationManager.getConfigInstance().clearProperty("unitTestPrefix.command.default.rollingStats.timeInMilliseconds");
+        archaiusPlugins.getConfig().clearProperty("unitTestPrefix.command.default.rollingStats.timeInMilliseconds");
     }
 
     @Test
     public void testIntegerInstanceDynamicOverrideOfEverything() throws Exception {
         HystrixCommandProperties properties = new TestPropertiesCommand(TestKey.TEST,
                 new HystrixCommandProperties.Setter().withMetricsRollingStatisticalWindowInMilliseconds(5000), "unitTestPrefix");
-        ConfigurationManager.getConfigInstance().setProperty("unitTestPrefix.command.default.metrics.rollingStats.timeInMilliseconds", 1234);
-        ConfigurationManager.getConfigInstance().setProperty("unitTestPrefix.command.TEST.metrics.rollingStats.timeInMilliseconds", 3456);
+        archaiusPlugins.getConfig().setProperty("unitTestPrefix.command.default.metrics.rollingStats.timeInMilliseconds", 1234);
+        archaiusPlugins.getConfig().setProperty("unitTestPrefix.command.TEST.metrics.rollingStats.timeInMilliseconds", 3456);
 
         // the instance specific dynamic property should take precedence over everything
         assertEquals(3456, properties.metricsRollingStatisticalWindowInMilliseconds().get().intValue());
 
         // cleanup 
-        ConfigurationManager.getConfigInstance().clearProperty("unitTestPrefix.command.default.metrics.rollingStats.timeInMilliseconds");
-        ConfigurationManager.getConfigInstance().clearProperty("unitTestPrefix.command.TEST.metrics.rollingStats.timeInMilliseconds");
+        archaiusPlugins.getConfig().clearProperty("unitTestPrefix.command.default.metrics.rollingStats.timeInMilliseconds");
+        archaiusPlugins.getConfig().clearProperty("unitTestPrefix.command.TEST.metrics.rollingStats.timeInMilliseconds");
     }
 
     @Test
     public void testThreadPoolOnlyHasInstanceOverride() throws Exception {
         HystrixCommandProperties properties = new TestPropertiesCommand(TestKey.TEST, new HystrixCommandProperties.Setter(), "unitTestPrefix");
-        ConfigurationManager.getConfigInstance().setProperty("unitTestPrefix.command.default.threadPoolKeyOverride", 1234);
+        archaiusPlugins.getConfig().setProperty("unitTestPrefix.command.default.threadPoolKeyOverride", 1234);
         // it should be null
         assertEquals(null, properties.executionIsolationThreadPoolKeyOverride().get());
-        ConfigurationManager.getConfigInstance().setProperty("unitTestPrefix.command.TEST.threadPoolKeyOverride", "testPool");
+        archaiusPlugins.getConfig().setProperty("unitTestPrefix.command.TEST.threadPoolKeyOverride", "testPool");
         // now it should have a value
         assertEquals("testPool", properties.executionIsolationThreadPoolKeyOverride().get());
 
         // cleanup 
-        ConfigurationManager.getConfigInstance().clearProperty("unitTestPrefix.command.default.threadPoolKeyOverride");
-        ConfigurationManager.getConfigInstance().clearProperty("unitTestPrefix.command.TEST.threadPoolKeyOverride");
+        archaiusPlugins.getConfig().clearProperty("unitTestPrefix.command.default.threadPoolKeyOverride");
+        archaiusPlugins.getConfig().clearProperty("unitTestPrefix.command.TEST.threadPoolKeyOverride");
     }
 
 }

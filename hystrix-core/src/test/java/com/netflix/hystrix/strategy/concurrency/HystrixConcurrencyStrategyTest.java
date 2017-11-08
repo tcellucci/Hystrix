@@ -18,19 +18,21 @@ package com.netflix.hystrix.strategy.concurrency;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.lang.IllegalStateException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.netflix.hystrix.strategy.Archaius2HystrixPlugins;
 import com.netflix.hystrix.strategy.concurrency.HystrixConcurrencyStrategy;
 import com.netflix.hystrix.strategy.concurrency.HystrixRequestContext;
+
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 import rx.functions.Action1;
 import rx.functions.Func1;
 
-import com.netflix.config.ConfigurationManager;
+import com.netflix.archaius.api.config.SettableConfig;
 import com.netflix.hystrix.HystrixCommand;
 import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandProperties;
@@ -46,9 +48,6 @@ public class HystrixConcurrencyStrategyTest {
     @After
     public void cleanup() {
         shutdownContextIfExists();
-
-        // force properties to be clean as well
-        ConfigurationManager.getConfigInstance().clear();
     }
 
     /**
@@ -89,6 +88,9 @@ public class HystrixConcurrencyStrategyTest {
         }
 
     }
+    
+    @Rule
+    public Archaius2HystrixPlugins archaiusPlugins = new Archaius2HystrixPlugins();
 
     @Test
     public void testThreadContextOnTimeout() {
@@ -111,7 +113,7 @@ public class HystrixConcurrencyStrategyTest {
     @Test
     public void testNoRequestContextOnSimpleConcurencyStrategyWithoutException() throws Exception {
         shutdownContextIfExists();
-        ConfigurationManager.getConfigInstance().setProperty("hystrix.command.default.requestLog.enabled", "false");
+        archaiusPlugins.getConfig().setProperty("hystrix.command.default.requestLog.enabled", "false");
 
         new SimpleCommand().execute();
 

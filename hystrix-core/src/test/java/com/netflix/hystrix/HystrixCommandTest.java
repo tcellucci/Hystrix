@@ -16,19 +16,20 @@
 package com.netflix.hystrix;
 
 import com.hystrix.junit.HystrixRequestContextRule;
-import com.netflix.config.ConfigurationManager;
 import com.netflix.hystrix.AbstractCommand.TryableSemaphore;
 import com.netflix.hystrix.AbstractCommand.TryableSemaphoreActual;
 import com.netflix.hystrix.HystrixCircuitBreakerTest.TestCircuitBreaker;
 import com.netflix.hystrix.HystrixCommandProperties.ExecutionIsolationStrategy;
 import com.netflix.hystrix.exception.HystrixBadRequestException;
 import com.netflix.hystrix.exception.HystrixRuntimeException;
+import com.netflix.hystrix.strategy.Archaius2HystrixPlugins;
 import com.netflix.hystrix.strategy.HystrixPlugins;
 import com.netflix.hystrix.strategy.concurrency.HystrixContextRunnable;
 import com.netflix.hystrix.strategy.concurrency.HystrixContextScheduler;
 import com.netflix.hystrix.strategy.concurrency.HystrixRequestContext;
 import com.netflix.hystrix.strategy.executionhook.HystrixCommandExecutionHook;
 import com.netflix.hystrix.strategy.properties.HystrixProperty;
+
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -67,11 +68,12 @@ import static org.junit.Assert.*;
 public class HystrixCommandTest extends CommonHystrixCommandTests<TestHystrixCommand<Integer>> {
     @Rule
     public HystrixRequestContextRule ctx = new HystrixRequestContextRule();
+    
+    @Rule
+    public Archaius2HystrixPlugins archaiusPlugins = new Archaius2HystrixPlugins();
 
     @After
     public void cleanup() {
-        // force properties to be clean as well
-        ConfigurationManager.getConfigInstance().clear();
 
         HystrixCommandKey key = Hystrix.getCurrentThreadExecutingCommand();
         if (key != null) {

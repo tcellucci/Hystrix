@@ -15,15 +15,18 @@
  */
 package com.netflix.hystrix.contrib.requests.stream;
 
-import com.netflix.config.DynamicIntProperty;
-import com.netflix.config.DynamicPropertyFactory;
 import com.netflix.hystrix.contrib.sample.stream.HystrixSampleSseServlet;
 import com.netflix.hystrix.metric.HystrixRequestEvents;
 import com.netflix.hystrix.metric.HystrixRequestEventsStream;
 import com.netflix.hystrix.serial.SerialHystrixRequestEvents;
+import com.netflix.hystrix.strategy.HystrixPlugins;
+import com.netflix.hystrix.strategy.properties.HystrixDynamicProperty;
+
 import rx.Observable;
 import rx.functions.Func1;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.servlet.ServletException;
 
 /**
  * Servlet that writes SSE JSON every time a request is made
@@ -34,8 +37,7 @@ public class HystrixRequestEventsSseServlet extends HystrixSampleSseServlet {
 
     /* used to track number of connections and throttle */
     private static AtomicInteger concurrentConnections = new AtomicInteger(0);
-    private static DynamicIntProperty maxConcurrentConnections =
-            DynamicPropertyFactory.getInstance().getIntProperty("hystrix.config.stream.maxConcurrentConnections", 5);
+    private HystrixDynamicProperty<Integer> maxConcurrentConnections;
 
     public HystrixRequestEventsSseServlet() {
         this(HystrixRequestEventsStream.getInstance().observe(), DEFAULT_PAUSE_POLLER_THREAD_DELAY_IN_MS);
@@ -48,6 +50,13 @@ public class HystrixRequestEventsSseServlet extends HystrixSampleSseServlet {
                 return SerialHystrixRequestEvents.toJsonString(requestEvents);
             }
         }), pausePollerThreadDelayInMs);
+    }
+
+    @Override
+    public void init() throws ServletException {
+        maxConcurrentConnections =
+                HystrixPlugins.getInstance().getDynamicProperties().getInteger("hystrix.config.stream.maxConcurrentConnections", 5);
+        super.init();
     }
 
     @Override

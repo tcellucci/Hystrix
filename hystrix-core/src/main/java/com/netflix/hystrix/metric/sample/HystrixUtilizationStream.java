@@ -15,32 +15,31 @@
  */
 package com.netflix.hystrix.metric.sample;
 
-import com.netflix.config.DynamicIntProperty;
-import com.netflix.config.DynamicPropertyFactory;
 import com.netflix.hystrix.HystrixCommandKey;
 import com.netflix.hystrix.HystrixCommandMetrics;
 import com.netflix.hystrix.HystrixThreadPoolKey;
 import com.netflix.hystrix.HystrixThreadPoolMetrics;
+import com.netflix.hystrix.strategy.HystrixPlugins;
+
 import rx.Observable;
 import rx.functions.Action0;
 import rx.functions.Func1;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * This class samples current Hystrix utilization of resources and exposes that as a stream
  */
 public class HystrixUtilizationStream {
+    private static final AtomicReference<HystrixUtilizationStream> singleton = new AtomicReference<>();
     private final int intervalInMilliseconds;
     private final Observable<HystrixUtilization> allUtilizationStream;
     private final AtomicBoolean isSourceCurrentlySubscribed = new AtomicBoolean(false);
-
-    private static final DynamicIntProperty dataEmissionIntervalInMs =
-            DynamicPropertyFactory.getInstance().getIntProperty("hystrix.stream.utilization.intervalInMilliseconds", 500);
-
 
     private static final Func1<Long, HystrixUtilization> getAllUtilization =
             new Func1<Long, HystrixUtilization>() {
@@ -78,12 +77,8 @@ public class HystrixUtilizationStream {
                 .onBackpressureDrop();
     }
 
-    //The data emission interval is looked up on startup only
-    private static final HystrixUtilizationStream INSTANCE =
-            new HystrixUtilizationStream(dataEmissionIntervalInMs.get());
-
     public static HystrixUtilizationStream getInstance() {
-        return INSTANCE;
+        return singleton.updateAndGet(s->Optional.ofNullable(s).orElseGet(()->new HystrixUtilizationStream(HystrixPlugins.getInstance().getDynamicProperties().getInteger("hystrix.stream.utilization.intervalInMilliseconds", 500).get())));
     }
 
     static HystrixUtilizationStream getNonSingletonInstanceOnlyUsedInUnitTests(int delayInMs) {

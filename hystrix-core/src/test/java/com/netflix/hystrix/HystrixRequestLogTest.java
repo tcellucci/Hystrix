@@ -16,6 +16,8 @@
 package com.netflix.hystrix;
 
 import com.hystrix.junit.HystrixRequestContextRule;
+import com.netflix.hystrix.strategy.Archaius2HystrixPlugins;
+
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Rule;
@@ -30,6 +32,9 @@ public class HystrixRequestLogTest {
     @Rule
     public HystrixRequestContextRule ctx = new HystrixRequestContextRule();
 
+    @Rule
+    public Archaius2HystrixPlugins archaiusPlugins = new Archaius2HystrixPlugins();
+    
     @Test
     public void testSuccess() {
         new TestCommand("A", false, true).execute();

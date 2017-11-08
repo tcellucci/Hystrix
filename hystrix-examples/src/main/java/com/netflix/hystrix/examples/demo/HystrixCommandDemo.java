@@ -23,12 +23,17 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import com.netflix.config.ConfigurationManager;
+import com.netflix.archaius.DefaultPropertyFactory;
+import com.netflix.archaius.api.config.SettableConfig;
+import com.netflix.archaius.config.DefaultSettableConfig;
 import com.netflix.hystrix.HystrixCommandKey;
 import com.netflix.hystrix.HystrixCommandMetrics;
 import com.netflix.hystrix.HystrixCommandMetrics.HealthCounts;
 import com.netflix.hystrix.HystrixRequestLog;
+import com.netflix.hystrix.strategy.DynamicPropertiesHelper;
+import com.netflix.hystrix.strategy.HystrixPlugins;
 import com.netflix.hystrix.strategy.concurrency.HystrixRequestContext;
+import com.netflix.hystrix.strategy.properties.archaius2.Archaius2DynamicProperties;
 
 /**
  * Executable client that demonstrates the lifecycle, metrics, request log and behavior of HystrixCommands.
@@ -36,20 +41,24 @@ import com.netflix.hystrix.strategy.concurrency.HystrixRequestContext;
 public class HystrixCommandDemo {
 
     public static void main(String args[]) {
-        new HystrixCommandDemo().startDemo();
+        SettableConfig config = new DefaultSettableConfig();
+        DynamicPropertiesHelper.setDynamicProperties(new Archaius2DynamicProperties(new DefaultPropertyFactory(config)));
+        assert HystrixPlugins.getInstance().getDynamicProperties() instanceof Archaius2DynamicProperties;
+        
+        new HystrixCommandDemo(config).startDemo();
     }
 
-    public HystrixCommandDemo() {
+    public HystrixCommandDemo(SettableConfig config) {
         /*
          * Instead of using injected properties we'll set them via Archaius
          * so the rest of the code behaves as it would in a real system
          * where it picks up properties externally provided.
          */
-        ConfigurationManager.getConfigInstance().setProperty("hystrix.threadpool.default.coreSize", 8);
-        ConfigurationManager.getConfigInstance().setProperty("hystrix.command.CreditCardCommand.execution.isolation.thread.timeoutInMilliseconds", 3000);
-        ConfigurationManager.getConfigInstance().setProperty("hystrix.command.GetUserAccountCommand.execution.isolation.thread.timeoutInMilliseconds", 50);
+        config.setProperty("hystrix.threadpool.default.coreSize", 8);
+        config.setProperty("hystrix.command.CreditCardCommand.execution.isolation.thread.timeoutInMilliseconds", 3000);
+        config.setProperty("hystrix.command.GetUserAccountCommand.execution.isolation.thread.timeoutInMilliseconds", 50);
         // set the rolling percentile more granular so we see data change every second rather than every 10 seconds as is the default 
-        ConfigurationManager.getConfigInstance().setProperty("hystrix.command.default.metrics.rollingPercentile.numBuckets", 60);
+        config.setProperty("hystrix.command.default.metrics.rollingPercentile.numBuckets", 60);
     }
 
     /*

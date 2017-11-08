@@ -15,15 +15,18 @@
  */
 package com.netflix.hystrix.contrib.sample.stream;
 
-import com.netflix.config.DynamicIntProperty;
-import com.netflix.config.DynamicPropertyFactory;
 import com.netflix.hystrix.metric.sample.HystrixUtilization;
 import com.netflix.hystrix.metric.sample.HystrixUtilizationStream;
 import com.netflix.hystrix.serial.SerialHystrixUtilization;
+import com.netflix.hystrix.strategy.HystrixPlugins;
+import com.netflix.hystrix.strategy.properties.HystrixDynamicProperty;
+
 import rx.Observable;
 import rx.functions.Func1;
 
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.servlet.ServletException;
 
 /**
  * Streams Hystrix config in text/event-stream format.
@@ -52,8 +55,7 @@ public class HystrixUtilizationSseServlet extends HystrixSampleSseServlet {
 
     /* used to track number of connections and throttle */
     private static AtomicInteger concurrentConnections = new AtomicInteger(0);
-    private static DynamicIntProperty maxConcurrentConnections =
-            DynamicPropertyFactory.getInstance().getIntProperty("hystrix.config.stream.maxConcurrentConnections", 5);
+    private HystrixDynamicProperty<Integer> maxConcurrentConnections;
 
     public HystrixUtilizationSseServlet() {
         this(HystrixUtilizationStream.getInstance().observe(), DEFAULT_PAUSE_POLLER_THREAD_DELAY_IN_MS);
@@ -66,6 +68,13 @@ public class HystrixUtilizationSseServlet extends HystrixSampleSseServlet {
                 return SerialHystrixUtilization.toJsonString(hystrixUtilization);
             }
         }), pausePollerThreadDelayInMs);
+    }
+    
+    @Override
+    public void init() throws ServletException {
+        maxConcurrentConnections =
+                HystrixPlugins.getInstance().getDynamicProperties().getInteger("hystrix.config.stream.maxConcurrentConnections", 5);
+        super.init();
     }
 
     @Override

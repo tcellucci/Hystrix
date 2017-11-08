@@ -17,10 +17,10 @@ package com.netflix.hystrix;
 
 import static org.junit.Assert.assertEquals;
 
-import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
 
-import com.netflix.config.ConfigurationManager;
+import com.netflix.hystrix.strategy.Archaius2HystrixPlugins;
 import com.netflix.hystrix.strategy.properties.HystrixProperty;
 
 public class HystrixThreadPoolPropertiesTest {
@@ -39,6 +39,9 @@ public class HystrixThreadPoolPropertiesTest {
                 .withMetricsRollingStatisticalWindowBuckets(10);// number of buckets in rolling number (10 1-second buckets)
     }
 
+    @Rule
+    public Archaius2HystrixPlugins archaiusPlugins = new Archaius2HystrixPlugins();
+    
     /**
      * Return a static representation of the properties with values from the Builder so that UnitTests can create properties that are not affected by the actual implementations which pick up their
      * values dynamically.
@@ -90,11 +93,6 @@ public class HystrixThreadPoolPropertiesTest {
 
     private static enum TestThreadPoolKey implements HystrixThreadPoolKey {
         TEST
-    }
-
-    @After
-    public void cleanup() {
-        ConfigurationManager.getConfigInstance().clear();
     }
 
     @Test

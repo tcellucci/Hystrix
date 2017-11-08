@@ -21,13 +21,20 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import com.netflix.config.ConfigurationManager;
+
+import com.netflix.archaius.DefaultPropertyFactory;
+import com.netflix.archaius.api.config.SettableConfig;
+import com.netflix.archaius.config.DefaultSettableConfig;
 import com.netflix.hystrix.HystrixCommandKey;
 import com.netflix.hystrix.HystrixCommandMetrics;
 import com.netflix.hystrix.HystrixCommandMetrics.HealthCounts;
 import com.netflix.hystrix.HystrixRequestLog;
+import com.netflix.hystrix.strategy.DynamicPropertiesHelper;
+import com.netflix.hystrix.strategy.HystrixPlugins;
 import com.netflix.hystrix.strategy.concurrency.HystrixContextRunnable;
 import com.netflix.hystrix.strategy.concurrency.HystrixRequestContext;
+import com.netflix.hystrix.strategy.properties.archaius2.Archaius2DynamicProperties;
+
 import rx.Observable;
 import rx.Subscriber;
 import rx.functions.Action0;
@@ -42,10 +49,13 @@ import rx.plugins.RxJavaSchedulersHook;
  */
 public class HystrixCommandAsyncDemo {
 
-//    public static void main(String args[]) {
-//        new HystrixCommandAsyncDemo().startDemo(true);
-//    }
-
+    public static void main(String args[]) {
+        SettableConfig config = new DefaultSettableConfig();
+        DynamicPropertiesHelper.setDynamicProperties(new Archaius2DynamicProperties(new DefaultPropertyFactory(config)));
+        assert HystrixPlugins.getInstance().getDynamicProperties() instanceof Archaius2DynamicProperties;
+        new HystrixCommandAsyncDemo(config).startDemo(true);
+    }
+    
     static class ContextAwareRxSchedulersHook extends RxJavaSchedulersHook {
         @Override
         public Action0 onSchedule(final Action0 initialAction) {
@@ -66,17 +76,17 @@ public class HystrixCommandAsyncDemo {
         }
     }
 
-    public HystrixCommandAsyncDemo() {
+    public HystrixCommandAsyncDemo(SettableConfig config) {
         /*
          * Instead of using injected properties we'll set them via Archaius
          * so the rest of the code behaves as it would in a real system
          * where it picks up properties externally provided.
          */
-        ConfigurationManager.getConfigInstance().setProperty("hystrix.threadpool.default.coreSize", 8);
-        ConfigurationManager.getConfigInstance().setProperty("hystrix.command.CreditCardCommand.execution.isolation.thread.timeoutInMilliseconds", 3000);
-        ConfigurationManager.getConfigInstance().setProperty("hystrix.command.GetUserAccountCommand.execution.isolation.thread.timeoutInMilliseconds", 50);
+        config.setProperty("hystrix.threadpool.default.coreSize", 8);
+        config.setProperty("hystrix.command.CreditCardCommand.execution.isolation.thread.timeoutInMilliseconds", 3000);
+        config.setProperty("hystrix.command.GetUserAccountCommand.execution.isolation.thread.timeoutInMilliseconds", 50);
         // set the rolling percentile more granular so we see data change every second rather than every 10 seconds as is the default 
-        ConfigurationManager.getConfigInstance().setProperty("hystrix.command.default.metrics.rollingPercentile.numBuckets", 60);
+        config.setProperty("hystrix.command.default.metrics.rollingPercentile.numBuckets", 60);
 
         RxJavaPlugins.getInstance().registerSchedulersHook(new ContextAwareRxSchedulersHook());
     }

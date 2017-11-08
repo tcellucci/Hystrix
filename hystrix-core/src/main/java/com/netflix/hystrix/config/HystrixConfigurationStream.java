@@ -15,8 +15,6 @@
  */
 package com.netflix.hystrix.config;
 
-import com.netflix.config.DynamicIntProperty;
-import com.netflix.config.DynamicPropertyFactory;
 import com.netflix.hystrix.HystrixCollapserKey;
 import com.netflix.hystrix.HystrixCollapserMetrics;
 import com.netflix.hystrix.HystrixCollapserProperties;
@@ -27,14 +25,18 @@ import com.netflix.hystrix.HystrixCommandProperties;
 import com.netflix.hystrix.HystrixThreadPoolKey;
 import com.netflix.hystrix.HystrixThreadPoolMetrics;
 import com.netflix.hystrix.HystrixThreadPoolProperties;
+import com.netflix.hystrix.strategy.HystrixPlugins;
+
 import rx.Observable;
 import rx.functions.Action0;
 import rx.functions.Func1;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * This class samples current Hystrix configuration and exposes that as a stream
@@ -44,10 +46,7 @@ public class HystrixConfigurationStream {
     private final int intervalInMilliseconds;
     private final Observable<HystrixConfiguration> allConfigurationStream;
     private final AtomicBoolean isSourceCurrentlySubscribed = new AtomicBoolean(false);
-
-    private static final DynamicIntProperty dataEmissionIntervalInMs =
-            DynamicPropertyFactory.getInstance().getIntProperty("hystrix.stream.config.intervalInMilliseconds", 5000);
-
+    private static final AtomicReference<HystrixConfigurationStream> singleton = new AtomicReference<>();
 
     private static final Func1<Long, HystrixConfiguration> getAllConfig =
             new Func1<Long, HystrixConfiguration>() {
@@ -86,12 +85,9 @@ public class HystrixConfigurationStream {
                 .onBackpressureDrop();
     }
 
-    //The data emission interval is looked up on startup only
-    private static final HystrixConfigurationStream INSTANCE =
-            new HystrixConfigurationStream(dataEmissionIntervalInMs.get());
 
     public static HystrixConfigurationStream getInstance() {
-        return INSTANCE;
+        return singleton.updateAndGet(s->Optional.ofNullable(s).orElseGet(()->new HystrixConfigurationStream(HystrixPlugins.getInstance().getDynamicProperties().getInteger("hystrix.stream.config.intervalInMilliseconds", 5000).get())));
     }
 
     static HystrixConfigurationStream getNonSingletonInstanceOnlyUsedInUnitTests(int delayInMs) {

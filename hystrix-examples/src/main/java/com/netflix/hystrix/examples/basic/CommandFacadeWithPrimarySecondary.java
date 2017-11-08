@@ -17,18 +17,24 @@ package com.netflix.hystrix.examples.basic;
 
 import static org.junit.Assert.*;
 
+import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.netflix.config.ConfigurationManager;
-import com.netflix.config.DynamicBooleanProperty;
-import com.netflix.config.DynamicPropertyFactory;
+import com.netflix.archaius.DefaultPropertyFactory;
+import com.netflix.archaius.api.config.SettableConfig;
+import com.netflix.archaius.config.DefaultSettableConfig;
 import com.netflix.hystrix.HystrixCommand;
 import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandKey;
 import com.netflix.hystrix.HystrixCommandProperties;
 import com.netflix.hystrix.HystrixCommandProperties.ExecutionIsolationStrategy;
 import com.netflix.hystrix.HystrixThreadPoolKey;
+import com.netflix.hystrix.strategy.DynamicPropertiesHelper;
+import com.netflix.hystrix.strategy.HystrixPlugins;
 import com.netflix.hystrix.strategy.concurrency.HystrixRequestContext;
+import com.netflix.hystrix.strategy.properties.HystrixDynamicProperty;
+import com.netflix.hystrix.strategy.properties.archaius2.Archaius2DynamicProperties;
 
 /**
  * Sample {@link HystrixCommand} pattern using a semaphore-isolated command
@@ -36,7 +42,7 @@ import com.netflix.hystrix.strategy.concurrency.HystrixRequestContext;
  */
 public class CommandFacadeWithPrimarySecondary extends HystrixCommand<String> {
 
-    private final static DynamicBooleanProperty usePrimary = DynamicPropertyFactory.getInstance().getBooleanProperty("primarySecondary.usePrimary", true);
+    private final HystrixDynamicProperty<Boolean> usePrimary = HystrixPlugins.getInstance().getDynamicProperties().getBoolean("primarySecondary.usePrimary", true);
 
     private final int id;
 
@@ -118,16 +124,24 @@ public class CommandFacadeWithPrimarySecondary extends HystrixCommand<String> {
     }
 
     public static class UnitTest {
+        private static SettableConfig config;
+        
+        @BeforeClass
+        public static void init() {
+            config = new DefaultSettableConfig();
+            DynamicPropertiesHelper.setDynamicProperties(new Archaius2DynamicProperties(new DefaultPropertyFactory(config)));
+            HystrixPlugins.getInstance();
+            Assert.assertTrue(HystrixPlugins.getInstance().getDynamicProperties() instanceof Archaius2DynamicProperties);
+        }
 
         @Test
         public void testPrimary() {
             HystrixRequestContext context = HystrixRequestContext.initializeContext();
             try {
-                ConfigurationManager.getConfigInstance().setProperty("primarySecondary.usePrimary", true);
+                config.setProperty("primarySecondary.usePrimary", true);
                 assertEquals("responseFromPrimary-20", new CommandFacadeWithPrimarySecondary(20).execute());
             } finally {
-                context.shutdown();
-                ConfigurationManager.getConfigInstance().clear();
+                context.shutdown();                
             }
         }
 
@@ -135,11 +149,10 @@ public class CommandFacadeWithPrimarySecondary extends HystrixCommand<String> {
         public void testSecondary() {
             HystrixRequestContext context = HystrixRequestContext.initializeContext();
             try {
-                ConfigurationManager.getConfigInstance().setProperty("primarySecondary.usePrimary", false);
+                config.setProperty("primarySecondary.usePrimary", false);
                 assertEquals("responseFromSecondary-20", new CommandFacadeWithPrimarySecondary(20).execute());
             } finally {
                 context.shutdown();
-                ConfigurationManager.getConfigInstance().clear();
             }
         }
     }

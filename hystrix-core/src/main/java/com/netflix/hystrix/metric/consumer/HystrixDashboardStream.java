@@ -15,26 +15,27 @@
  */
 package com.netflix.hystrix.metric.consumer;
 
-import com.netflix.config.DynamicIntProperty;
-import com.netflix.config.DynamicPropertyFactory;
 import com.netflix.hystrix.HystrixCollapserMetrics;
 import com.netflix.hystrix.HystrixCommandMetrics;
 import com.netflix.hystrix.HystrixThreadPoolMetrics;
+import com.netflix.hystrix.strategy.HystrixPlugins;
+
 import rx.Observable;
 import rx.functions.Action0;
 import rx.functions.Func1;
 
 import java.util.Collection;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class HystrixDashboardStream {
     final int delayInMs;
     final Observable<DashboardData> singleSource;
     final AtomicBoolean isSourceCurrentlySubscribed = new AtomicBoolean(false);
 
-    private static final DynamicIntProperty dataEmissionIntervalInMs =
-            DynamicPropertyFactory.getInstance().getIntProperty("hystrix.stream.dashboard.intervalInMilliseconds", 500);
+    private static final AtomicReference<HystrixDashboardStream> singleton = new AtomicReference<>();
 
     private HystrixDashboardStream(int delayInMs) {
         this.delayInMs = delayInMs;
@@ -65,12 +66,8 @@ public class HystrixDashboardStream {
                 .onBackpressureDrop();
     }
 
-    //The data emission interval is looked up on startup only
-    private static final HystrixDashboardStream INSTANCE =
-            new HystrixDashboardStream(dataEmissionIntervalInMs.get());
-
     public static HystrixDashboardStream getInstance() {
-        return INSTANCE;
+        return singleton.updateAndGet(s->Optional.ofNullable(s).orElseGet(()->new HystrixDashboardStream(HystrixPlugins.getInstance().getDynamicProperties().getInteger("hystrix.stream.dashboard.intervalInMilliseconds", 500).get())));
     }
 
     static HystrixDashboardStream getNonSingletonInstanceOnlyUsedInUnitTests(int delayInMs) {

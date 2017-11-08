@@ -24,12 +24,12 @@ import javax.ws.rs.core.Response;
 
 import rx.functions.Func1;
 
-import com.netflix.config.DynamicIntProperty;
-import com.netflix.config.DynamicPropertyFactory;
 import com.netflix.hystrix.contrib.metrics.HystrixStreamFeature;
 import com.netflix.hystrix.metric.HystrixRequestEvents;
 import com.netflix.hystrix.metric.HystrixRequestEventsStream;
 import com.netflix.hystrix.serial.SerialHystrixRequestEvents;
+import com.netflix.hystrix.strategy.HystrixPlugins;
+import com.netflix.hystrix.strategy.properties.HystrixDynamicProperty;
 
 /**
  * Resource that writes SSE JSON every time a request is made
@@ -51,7 +51,7 @@ import com.netflix.hystrix.serial.SerialHystrixRequestEvents;
 public class HystrixRequestEventsSseController extends AbstractHystrixStreamController {
 
 	private static final AtomicInteger concurrentConnections = new AtomicInteger(0);
-	private static DynamicIntProperty maxConcurrentConnections = DynamicPropertyFactory.getInstance().getIntProperty("hystrix.config.stream.maxConcurrentConnections", 5);
+    private HystrixDynamicProperty<Integer> maxConcurrentConnections;
 
 	public HystrixRequestEventsSseController() {
 		super(HystrixRequestEventsStream.getInstance().observe().map(new Func1<HystrixRequestEvents, String>() {
@@ -60,6 +60,7 @@ public class HystrixRequestEventsSseController extends AbstractHystrixStreamCont
 				return SerialHystrixRequestEvents.toJsonString(requestEvents);
 			}
 		}));
+        maxConcurrentConnections =  HystrixPlugins.getInstance().getDynamicProperties().getInteger("hystrix.config.stream.maxConcurrentConnections", 5);
 	}
 
 	@GET

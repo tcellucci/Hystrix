@@ -2,6 +2,7 @@ apply plugin: 'osgi'
 
 dependencies {
     compileApi project(':hystrix-core')
+    compileApi 'com.netflix.archaius:archaius2-core:2.2.11'    
     provided 'junit:junit-dep:4.10'
 }
 
